@@ -24,65 +24,6 @@ import shap
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-def calculate_cumulative_sums(group):
-    # Ensure the group is sorted by 'lev'
-    group = group.sort_values(by='lev')
-
-    # Calculate cumulative sums for Met_OPTD
-    #group['cumsum_asc'] = group['Met_OPTD'].cumsum()
-    #group['cumsum_desc'] = group['Met_OPTD'][::-1].cumsum()
-    #group['OPTD_above'] = group['cumsum_asc'] - group['Met_OPTD']
-    #group['OPTD_below'] = group['cumsum_desc'].shift(-1).fillna(0)
-
-    # Calculate cumulative sums for Met_TAUCLW
-    group['cumsum_asc_tauclw'] = group['Met_TAUCLW'].cumsum()
-    group['cumsum_desc_tauclw'] = group['Met_TAUCLW'][::-1].cumsum()
-    group['TAUCLW_above'] = group['cumsum_asc_tauclw'] - group['Met_TAUCLW']
-    group['TAUCLW_below'] = group['cumsum_desc_tauclw'].shift(-1).fillna(0)
-
-    # Calculate cumulative sums for Met_TAUCLI
-    group['cumsum_asc_taucli'] = group['Met_TAUCLI'].cumsum()
-    group['cumsum_desc_taucli'] = group['Met_TAUCLI'][::-1].cumsum()
-    group['TAUCLI_above'] = group['cumsum_asc_taucli'] - group['Met_TAUCLI']
-    group['TAUCLI_below'] = group['cumsum_desc_taucli'].shift(-1).fillna(0)
-
-    # Calculate cumulative sums for Met_CLDF
-    group['cumsum_asc_cldf'] = group['Met_CLDF'].cumsum()
-    group['cumsum_desc_cldf'] = group['Met_CLDF'][::-1].cumsum()
-    group['CLDF_above'] = group['cumsum_asc_cldf'] - group['Met_CLDF']
-    group['CLDF_below'] = group['cumsum_desc_cldf'].shift(-1).fillna(0)
-
-    return group
-
-def shaps_plotter(actual, model, species_id):
-    """
-    IN: 
-    actual - X_train would be (careful about log transform)
-    model - model...
-    species_id = jval in jval list
-    OUT:
-    A SHAPs plot saved
-
-    """
-    actual = actual.sample(n=10000)
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(actual)
-
-    columns = actual.columns.tolist()
-    mean_abs_shap = np.abs(shap_values).mean(axis=0)
-    sorted_ind = np.argsort(mean_abs_shap)[::-1]
-    sorted_features = np.array(columns)[sorted_ind]
-    sorted_shap_values = mean_abs_shap[sorted_ind]
-    plt.figure(figsize=(10, 6))
-    plt.barh(sorted_features, sorted_shap_values, color='dodgerblue')
-    plt.xlabel('Mean Absolute SHAP Value')
-    plt.ylabel('Features')
-    plt.title('Feature Importance Based on Mean Absolute SHAP Values')
-    plt.gca().invert_yaxis()  # To display the highest value at the top
-    plt.savefig(f'/users/vxv505/scratch/conda_environments/final_model_plots/xgb_model_SHAPS_{species_id}_feature_engineered.png', bbox_inches='tight', dpi=600)
-    plt.close()
-
-
 def model_maker(species_id, dtrain, dval):
     random_state = 2002
     objective = 'reg:squarederror'
@@ -120,32 +61,7 @@ def dmatrix_maker(X_train, y_train, X_eval, y_eval, X_test, y_test):
     dtest = xgb.DMatrix(X_test, label=y_test)
 
     return dtrain, dval, dtest
-def plot_residuals_pred(species_id, actual, predicted, LOG_PLOT=False): #add , filename
-    residuals = predicted - actual
-    fig, (ax_scatter, ax_hist) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [4, 1]}, figsize=(10, 6))
-    ax_scatter.scatter(predicted, residuals, alpha=0.3, cmap = 'coolwarm')
-    ax_scatter.axhline(y=0, color='black', linestyle='--')
-    ax_scatter.set_xlabel('Mean Predicted Values')
-    ax_scatter.set_ylabel('Residuals')
-    ax_scatter.set_title('Residuals vs. Mean Predicted Values')
-    if LOG_PLOT:
-        ax_scatter.set_yscale('log')
 
-    residuals_df = pd.DataFrame({'Residuals': residuals})
-    sns.histplot(data=residuals_df, y='Residuals', ax=ax_hist)
-    ax_hist.set_xlabel('Residual Count')
-    ax_hist.set_ylabel('')  # Remove y-axis label
-    ax_hist.set_title('Residual Distribution')
-    ax_hist.set_yticks([])
-    ax_hist.set_yticklabels([])
-    if LOG_PLOT:
-        ax_hist.set_yscale('log')
-
-    del residuals_df
-    plt.tight_layout()
-    #plt.show()
-    plt.savefig(f'/users/vxv505/scratch/conda_environments/final_model_plots/xgb_model_residuals_parquet_{species_id}tpng', bbox_inches='tight', dpi=600)
-    plt.close()
 
 def plot_eval(train_error, val_error, species_id):
     plt.figure(figsize=(10, 5))
@@ -192,32 +108,6 @@ DEBUG = True
 #       PREPARING DATA FOR TESTING & TRAINING
 #              & EVALUATION
 #================================================
-
-#------------------------------------------------
-#         Feature Engireering Above & Bel.
-#------------------------------------------------
-#master_df = master_df.groupby(['lat','lon','time'],group_keys=False).apply(calculate_cumulative_sums).reset_index(drop=True)
-
-#cols_to_drop = [ 'cumsum_asc_tauclw', 'cumsum_asc_taucli', 'cumsum_asc_cldf', 'cumsum_desc_tauclw', 'cumsum_desc_taucli', 'cumsum_desc_cldf']
-
-#master_df.drop(columns=cols_to_drop, inplace=True)
-
-print('Feature Engineered')
-#------------------------------------------------
-#               LEVEL Data split
-#------------------------------------------------
-
-time_index = 12
-level_index = 15
-
-unique_levels = np.sort(master_df['lev'].unique())
-
-chosen_level = unique_levels[level_index]
-
-#test_data = master_df[master_df['lev'] == chosen_level] #test data is selected for one specific level to plot
-
-#train_eval_data = master_df[master_df['lev'] != chosen_level]
-
 train_eval_data = master_df.copy()
 test_data = master_df.copy()
 
@@ -250,8 +140,8 @@ train_eval_data=train_eval_data.sort_values('time')
 total_points = len(train_eval_data)
 split_index = int(total_points * splitting_percent) #denotes the point at which the data is split
 
-train_data = train_eval_data.iloc[:split_index] #first 70%
-eval_data = train_eval_data.iloc[split_index:] #last 30%
+train_data = train_eval_data.iloc[:split_index] #first 75%
+eval_data = train_eval_data.iloc[split_index:] #last 25%
 print('Train & Eval Data Split')
 
 
@@ -329,8 +219,7 @@ for jval in jval_list:
     print(f"R-squared (R2): {r2}")
 
     plot_eval(train_error, val_error, jval)
-    shaps_plotter(X_train, model, jval)
-    #plot_residuals_pred(jval, y_test, y_pred, LOG_PLOT=False)
+    
     print(f'Species done {jval}')
     print('')
     print('')
