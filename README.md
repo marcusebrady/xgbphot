@@ -2,6 +2,9 @@
 
 Code used in the GEOS-Chem parameterisation of photolysis rate calculations.
 
+[![DOI](https://zenodo.org/badge/826721679.svg)](https://zenodo.org/doi/10.5281/zenodo.12705192)
+
+
 ## Description
 
 Fast-JX is the photolysis scheme used in GEOS-Chem version 14.2.2 ([10.5281/zenodo10034814](https://zenodo.org/records/10034814)) and in this project we parameterise these photolysis rate calculations through an ensemble of XGBoost models. Using [XGBoost version 1.6.0](https://xgboost.readthedocs.io/en/stable/) we train the models in python and then implement this models in Fortran in GEOS-Chem.
